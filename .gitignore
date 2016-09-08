@@ -3,3 +3,4 @@
 .env/*
 *.py~
 .ipynb_checkpoints/*
+cs231n/datasets/*
