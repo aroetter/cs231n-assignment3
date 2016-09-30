@@ -159,6 +159,28 @@ def rnn_backward(dh, cache):
   # sequence of data. You should use the rnn_step_backward function that you   #
   # defined above.                                                             #
   ##############################################################################
+  N, T, H = dh.shape
+  D = cache[0][1].shape[0]
+
+  dx = np.empty((N, T, D))
+  # dh0 = np.empty((N, H)) # maybe don't need this?
+  dprev_h = np.zeros((N, H))
+  dWx = np.zeros((D, H))
+  dWh = np.zeros((H, H))
+  db = np.zeros(H)
+  for t in reversed(xrange(T)):
+    cur_dh = dh[:, t, :] # cur_dh now has shape N, H
+    cur_cache = cache[t]
+    (cur_dx, dprev_h, cur_dWx, cur_dWh, cur_db) = rnn_step_backward(
+      # TODO::: not sure i 100% understand why i sum these 2 terms
+      cur_dh + dprev_h, cur_cache)
+    dx[:, t, :] = cur_dx
+    dWx += cur_dWx
+    dWh += cur_dWh
+    db += cur_db
+  # final hidden layer
+  dh0 = cur_dh
+  dh0 = dprev_h
   pass
   ##############################################################################
   #                               END OF YOUR CODE                             #
