@@ -32,6 +32,10 @@ def rnn_step_forward(x, prev_h, Wx, Wh, b):
   # hidden state and any values you need for the backward pass in the next_h   #
   # and cache variables respectively.                                          #
   ##############################################################################
+  next_h = np.tanh(prev_h.dot(Wh) + x.dot(Wx) + b) # yield NxH matrix
+
+
+  cache = (next_h, Wx, Wh, x, prev_h)
   pass
   ##############################################################################
   #                               END OF YOUR CODE                             #
@@ -61,6 +65,32 @@ def rnn_step_backward(dnext_h, cache):
   # HINT: For the tanh function, you can compute the local derivative in terms #
   # of the output value from tanh.                                             #
   ##############################################################################
+
+  # next_h is exactly the output of tanh (see above)
+  (next_h, Wx, Wh, x, prev_h) = cache
+
+  # derivative of tanh(x) => 1 - (tanh(x)^2)
+  tanh_deriv = 1.0 - next_h**2
+
+  # what is passed in as dnext_h is really dLoss/dtanH
+  # arg is the argument to the tanh, i.e. arg == h*Wh + x*Wx + b
+  # via chain rule: dLoss/dArg = dLoss/dtanH * dtanH/dArg
+  # we name this dArg is short for dLoss/dArg
+  dArg = dnext_h * tanh_deriv
+
+  # remember arg = h*Wh + x*Wx + b
+  # so dArg/dh = Wh, dArg/dx = Wx, dArg/dB = 1
+  
+  # chain rule: dLoss/dx = dLoss/dArg * dArg/dx
+  dx = dArg.dot(Wx.T)
+  # chain rule: dLoss/dprev_h = dLoss/dArg * dArg/dprev_h
+  dprev_h = dArg.dot(Wh.T)
+
+  # similarly, via chain rule:
+  dWx = x.T.dot(dArg)
+  dWh = prev_h.T.dot(dArg)
+  db = dArg.sum(axis=0)
+  
   pass
   ##############################################################################
   #                               END OF YOUR CODE                             #
