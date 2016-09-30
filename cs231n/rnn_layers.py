@@ -169,11 +169,14 @@ def rnn_backward(dh, cache):
   db = np.zeros(H)
   
   for t in reversed(xrange(T)):
-    cur_dh = dh[:, t, :] # cur_dh now has shape N, H
     cur_cache = cache[t]
+    # at each step, the derivative is the derivative i get from later
+    # on in the computation (dh), as well as the derivative i got from
+    # rnn_step_backward (dprev_h), which corresponds to the derivative
+    # from future time steps
+    total_dh = dh[:, t, :] + dprev_h
     (cur_dx, dprev_h, cur_dWx, cur_dWh, cur_db) = rnn_step_backward(
-      # TODO(aroetter): understand why i need to sum here at each step
-      cur_dh + dprev_h, cur_cache)
+      total_dh, cur_cache)
     dx[:, t, :] = cur_dx
     dWx += cur_dWx
     dWh += cur_dWh
@@ -208,6 +211,21 @@ def word_embedding_forward(x, W):
   #                                                                            #
   # HINT: This should be very simple.                                          #
   ##############################################################################
+
+  # I'll i'm doing is a lookup. each string out of the N i have is made of
+  # T words. All I do is lookup that word (an index 0 <= idx < V) and swap
+  # it for the corresponding D delement vector.
+
+  N, T = x.shape
+  D = W.shape[1]
+
+  out = np.empty((N, T, D))
+  for n in xrange(N):
+    cur_seq = x[n]
+    out[n, :, :] = W[cur_seq]
+  # TODO(aroetter: save the cache
+  V = W.shape[0]
+  cache = (x, V)
   pass
   ##############################################################################
   #                               END OF YOUR CODE                             #
@@ -236,7 +254,20 @@ def word_embedding_backward(dout, cache):
   #                                                                            #
   # HINT: Look up the function np.add.at                                       #
   ##############################################################################
-  pass
+  x, V = cache
+  N, T, D = dout.shape
+
+  dW = np.zeros((V, D))
+  for n in range(N):
+    indexes = x[n, :] # of shape T...there are T words in this datapt
+    gradients = dout[n, :, :] # of shape TxD.
+    # logically what this is doing is:
+    # loop over every word in the current datapt. (stored in indexes)
+    #   lookup the D gradients for that word
+    #   add those D gradients to the relevant row (for the cur word) in dW
+    # indexes is used to both slice into gradients (for reading), and into dW
+    #   (for incrementing)
+    np.add.at(dW, indexes, gradients)
   ##############################################################################
   #                               END OF YOUR CODE                             #
   ##############################################################################
