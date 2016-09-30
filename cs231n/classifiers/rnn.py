@@ -135,11 +135,39 @@ class CaptioningRNN(object):
     # defined above to store loss and gradients; grads[k] should give the      #
     # gradients for self.params[k].                                            #
     ############################################################################
-    pass
+    h0 = W_proj, b_proj # (D x H)
+
+    # Fwd Pass Step 1: features is NxD. W_proj is DxH.
+    h0 = features.dot(W_proj) + b_proj # h0 is N x H
+
+    # Fwd Pass Step 2: change words from indices to vectors
+    # data is then (N,T,W). (W is called D inside word_embedding_fwd)
+    (data, word_embedding_cache) = word_embedding_forward(captions_in, W_embed)
+    
+    # Fwd Pass Step 3
+    if self.cell_type == "rnn":
+      (hidden_states, rnn_forward_cache) = rnn_forward(data, h0, Wx, Wh, b)
+      # hidden_states has dimension (N, T, H)
+    else:
+      raise ValueError("Not implemented yet!")
+
+    # Fwd Pass Step 4: compute scores over vocabulary @ every
+    # what here is V is refered to as M inside temporal_affine_fwd()
+    # what here is H is refered to as D inside temporal_affine_fwd()
+    (scores, temporal_affine_cache) = temporal_affine_forward(
+      hidden_states, W_vocab, b_vocab)
+    # scores is (N, T, M) ... aka (N, T, V)
+    
+    # Fwd Pass Step 5:
+    (loss, dx) = temporal_softmax_loss(scores, captions_out, mask, verbose=True)
+
+
+    # Backward Pass
+    # TODO(aroetter)
+    
     ############################################################################
     #                             END OF YOUR CODE                             #
     ############################################################################
-    
     return loss, grads
 
 
