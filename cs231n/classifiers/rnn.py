@@ -138,7 +138,7 @@ class CaptioningRNN(object):
     h0 = W_proj, b_proj # (D x H)
 
     # Fwd Pass Step 1: features is NxD. W_proj is DxH.
-    h0 = features.dot(W_proj) + b_proj # h0 is N x H
+    (h0, h0_cache) = affine_forward(features, W_proj, b_proj)
 
     # Fwd Pass Step 2: change words from indices to vectors
     # data is then (N,T,W). (W is called D inside word_embedding_fwd)
@@ -159,12 +159,25 @@ class CaptioningRNN(object):
     # scores is (N, T, M) ... aka (N, T, V)
     
     # Fwd Pass Step 5:
-    (loss, dx) = temporal_softmax_loss(scores, captions_out, mask, verbose=True)
-
+    (loss, dscores) = temporal_softmax_loss(
+      scores, captions_out, mask, verbose=False)
 
     # Backward Pass
-    # TODO(aroetter)
+    # Bkwd Pass Step 5. Noop, we got it from the fwd pass which computes dscores
+    # should be shape (N, T, V)
+
+    # Bkwd Pass Step 4
+    (dhidden_states, grads['W_vocab'], grads['b_vocab']
+    ) = temporal_affine_backward(dscores, temporal_affine_cache)
     
+    # Bkwd Pass Step 3
+    # TODO(aroetter): wrap in if so i can do LSTM instead of RNN
+    (ddata, dh0, grads['Wx'], grads['Wh'], grads['b']) = rnn_backward(
+      dhidden_states, rnn_forward_cache)
+    # Bkwd Pass Step 2
+    grads['W_embed'] = word_embedding_backward(ddata, word_embedding_cache)
+    # Bkwd Pass Step 1
+    (_, grads['W_proj'], grads['b_proj']) = affine_backward(dh0, h0_cache)
     ############################################################################
     #                             END OF YOUR CODE                             #
     ############################################################################
