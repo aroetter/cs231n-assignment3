@@ -147,7 +147,7 @@ class CaptioningRNN(object):
       (hidden_states, rnn_forward_cache) = rnn_forward(data, h0, Wx, Wh, b)
       # hidden_states has dimension (N, T, H)
     else:
-      raise ValueError("TODO(aroetter): Not implemented yet!")
+      (hidden_states, rnn_forward_cache) = lstm_forward(data, h0, Wx, Wh, b)
 
     # Fwd Pass Step 4: compute scores over vocabulary @ every
     # what here is V is refered to as M inside temporal_affine_fwd()
@@ -173,7 +173,9 @@ class CaptioningRNN(object):
       (ddata, dh0, grads['Wx'], grads['Wh'], grads['b']) = rnn_backward(
         dhidden_states, rnn_forward_cache)
     else:
-      raise ValueError("TODO(aroetter): Not implemented yet!")
+      (ddata, dh0, grads['Wx'], grads['Wh'], grads['b']) = lstm_backward(
+        dhidden_states, rnn_forward_cache)
+
     # Bkwd Pass Step 2
     grads['W_embed'] = word_embedding_backward(ddata, word_embedding_cache)
     # Bkwd Pass Step 1
