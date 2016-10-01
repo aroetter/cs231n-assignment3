@@ -351,18 +351,16 @@ def lstm_step_backward(dnext_h, dnext_c, cache):
   - dWh: Gradient of hidden-to-hidden weights, of shape (H, 4H)
   - db: Gradient of biases, of shape (4H,)
   """
-  # TODO(aroetter): i think dh and dc can be deleted here. unreferenced
-  dx, dh, dc, dWx, dWh, db = None, None, None, None, None, None
+  dx, dWx, dWh, db = None, None, None, None
   #############################################################################
   # TODO: Implement the backward pass for a single timestep of an LSTM.       #
   #                                                                           #
   # HINT: For sigmoid and tanh you can compute local derivatives in terms of  #
   # the output value from the nonlinearity.                                   #
   #############################################################################
-  # TODO(aroetter): do all these get used?
   (i, f, o, g, next_c, prev_c, prev_h, Wx, Wh, x) = cache
-  tanh_next_c = np.tanh(next_c)
 
+  tanh_next_c = np.tanh(next_c)
 
   # one thing we'll need over and over is the derivative of loss wrt
   # dnext_c, VIA the next_h equation.
