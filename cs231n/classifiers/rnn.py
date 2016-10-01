@@ -248,11 +248,17 @@ class CaptioningRNN(object):
     cur_word[0] = self._start
     cur_words = np.tile(cur_word, N).reshape((N, 1))
 
+    cur_c = np.zeros_like(cur_h) # needed for LSTMs only
+
     for t in xrange(max_length):
       # convert from cur_words to the embedded vector representation
       cur_words_vec, _ = word_embedding_forward(cur_words, W_embed)
       # this index on cur_words_vec converts from Nx1xD to NxD
-      cur_h, _ = rnn_step_forward(cur_words_vec[:, 0, :], cur_h, Wx, Wh, b)
+      x = cur_words_vec[:, 0, :]
+      if self.cell_type == 'rnn':
+        cur_h, _ = rnn_step_forward(x, cur_h, Wx, Wh, b)
+      else:
+        (cur_h, cur_c, _) = lstm_step_forward(x, cur_h, cur_c, Wx, Wh, b)
 
       # cur_h is NxH. convert it to Nx1xH
       tmp = cur_h.reshape([cur_h.shape[0], 1, cur_h.shape[1]])
