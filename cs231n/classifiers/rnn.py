@@ -135,8 +135,6 @@ class CaptioningRNN(object):
     # defined above to store loss and gradients; grads[k] should give the      #
     # gradients for self.params[k].                                            #
     ############################################################################
-    h0 = W_proj, b_proj # (D x H)
-
     # Fwd Pass Step 1: features is NxD. W_proj is DxH.
     (h0, h0_cache) = affine_forward(features, W_proj, b_proj)
 
@@ -240,7 +238,43 @@ class CaptioningRNN(object):
     # functions; you'll need to call rnn_step_forward or lstm_step_forward in #
     # a loop.                                                                 #
     ###########################################################################
-    pass
+
+    # initialize cur_h to h0, which is of dim NxH (i think?).
+    cur_h, _ = affine_forward(features, W_proj, b_proj)
+    # build an N element array of <START> tokens in each position
+    cur_word = np.empty(1, dtype=int) #type needed b/c it's an index
+    cur_word[0] = self._start
+    cur_words = np.tile(cur_word, N).reshape((N, 1))
+
+
+    # W/D = wordvec_dim = 256
+    # H = hidden_dim = 512
+    # N = 2
+    for t in xrange(max_length):
+      # convert from cur_words to the embedded vector representation
+      cur_words_vec, _ = word_embedding_forward(cur_words, W_embed)
+      # this index on cur_words_vec converts from Nx1xD to NxD
+      cur_h, _ = rnn_step_forward(cur_words_vec[:, 0, :], cur_h, Wx, Wh, b)
+
+      # cur_h is NxH. convert it to Nx1xH
+      tmp = cur_h.reshape([cur_h.shape[0], 1, cur_h.shape[1]])
+      scores, _ = temporal_affine_forward(tmp, W_vocab, b_vocab)
+      #print "ALEX cur_h.shape=%s, tmp.shape=%s" % (cur_h.shape, tmp.shape)
+      
+      # convert from Nx1xV to NxV (V is vocab size, 1004 in our example)
+      scores = scores[:, 0, :]
+
+      # generate a N element vector which is argmax over axis=1, then convert
+      # to an Nx1 element array
+      cur_words = np.argmax(scores, axis=1).reshape([cur_words.shape[0], 1])
+      print "ALEX cur_words shape is " , cur_words.shape
+
+      # insert current N captions into the column for the N captions at this
+      # time slice
+      # TODO alex maybe don't need selector on RHS
+      captions[:, t] = cur_words[:, 0]
+      pass
+
     ############################################################################
     #                             END OF YOUR CODE                             #
     ############################################################################
