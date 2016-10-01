@@ -35,7 +35,7 @@ def rnn_step_forward(x, prev_h, Wx, Wh, b):
   next_h = np.tanh(prev_h.dot(Wh) + x.dot(Wx) + b) # yield NxH matrix
 
 
-  cache = (next_h, Wx, Wh, x, prev_h)
+  cache = (Wx, Wh, x, prev_h)
   pass
   ##############################################################################
   #                               END OF YOUR CODE                             #
@@ -68,7 +68,7 @@ def rnn_step_backward(dnext_h, cache):
 
   # next_h is exactly the output of tanh (see above)
   # TODO(aroetter): are all these used? next_h think not
-  (next_h, Wx, Wh, x, prev_h) = cache
+  (Wx, Wh, x, prev_h) = cache
 
   # derivative of tanh(x) => 1 - (tanh(x)^2)
   tanh_deriv = 1.0 - next_h**2
