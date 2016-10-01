@@ -67,6 +67,7 @@ def rnn_step_backward(dnext_h, cache):
   ##############################################################################
 
   # next_h is exactly the output of tanh (see above)
+  # TODO(aroetter): are all these used? next_h think not
   (next_h, Wx, Wh, x, prev_h) = cache
 
   # derivative of tanh(x) => 1 - (tanh(x)^2)
@@ -327,6 +328,8 @@ def lstm_step_forward(x, prev_h, prev_c, Wx, Wh, b):
   ##############################################################################
   #                               END OF YOUR CODE                             #
   ##############################################################################
+
+  cache = (i, f, o, g, next_c, prev_c, prev_h, Wx, Wh, x)
   
   return next_h, next_c, cache
 
@@ -348,6 +351,7 @@ def lstm_step_backward(dnext_h, dnext_c, cache):
   - dWh: Gradient of hidden-to-hidden weights, of shape (H, 4H)
   - db: Gradient of biases, of shape (4H,)
   """
+  # TODO(aroetter): i think dh and dc can be deleted here. unreferenced
   dx, dh, dc, dWx, dWh, db = None, None, None, None, None, None
   #############################################################################
   # TODO: Implement the backward pass for a single timestep of an LSTM.       #
@@ -355,7 +359,72 @@ def lstm_step_backward(dnext_h, dnext_c, cache):
   # HINT: For sigmoid and tanh you can compute local derivatives in terms of  #
   # the output value from the nonlinearity.                                   #
   #############################################################################
-  pass
+  # TODO(aroetter): do all these get used?
+  (i, f, o, g, next_c, prev_c, prev_h, Wx, Wh, x) = cache
+  tanh_next_c = np.tanh(next_c)
+
+
+  # one thing we'll need over and over is the derivative of loss wrt
+  # dnext_c, VIA the next_h equation.
+  # dLoss/dnext_c = dloss/dnext_h * dnext_h/dnext_c
+  alt_dnext_c = dnext_h * o * (1-np.power(tanh_next_c, 2))
+  
+  # many of this gradients contribute in 2 ways, once via next_c, once
+  # via next_h. here we call those paths 1 and 2, just for clarity.
+
+  # Path 1 (via next_c). dloss/dprev_c = dloss/dnext_c * dnext_c/dprev_c
+  dprev_c = dnext_c * f
+  # Path 2 (via next_h). dloss/dprev_c = alt_dnext_c * dnext_c/d_prevc
+  dprev_c += alt_dnext_c * f
+
+  # compute do. only contributes via path 2, via next_h
+  # Path 2 (via H): dLoss/do = dLoss/dnext_h * dnext_h / do
+  do = dnext_h * tanh_next_c
+
+  # compute df
+  # Path 1 (via next_c): dLoss/df = dLoss/dnext_c * dnext_c/df
+  df = dnext_c * prev_c
+  # Path 2 (via next_h): dLoss/dh = alt_dnext_c * dnext_c/df
+  df += alt_dnext_c * prev_c
+  
+  # compute di
+  # Path 1 (via next_c): dLoss/di = dLoss/dnext_c * dnext_c/di
+  di = dnext_c * g
+  # Path 2 (via next_h): dLoss/di = alt_dnext_c * dnext_c/di
+  di += alt_dnext_c * g
+
+  # compute dg
+  # Path 1 (via_next_c): dLoss/dg = dLoss/dnext_c * dnext_c/dg
+  # Path 2 (via next_h): dLoss/dg = alt_dnext_c * dnext_c/dg
+  dg = dnext_c * i
+  dg += alt_dnext_c * i
+
+  # now backprop through the sigmoids and tanh to get the a_*'s
+  # dLoss/da_i = dLoss/di * di/da_i (remember sigmoid(a_i) == i)
+  da_i = di * i * (1-i)
+  da_f = df * f * (1-f)
+  da_o = do * o * (1-o)
+  # dLoss/da_g = dLoss/dg * dg/da_g (remember g = tanh(a_g))
+  da_g = dg * (1-np.power(g, 2))
+
+  # remember a is just the concatenation of a_i, a_f, a_o, a_g
+  da = np.hstack((da_i, da_f, da_o, da_g))
+
+  # Now using da we can compute a bunch of results
+  # dLoss/dx = dLoss/da * da/dx
+  dx = da.dot(Wx.T)
+
+  # dLoss/dprev_h = dLoss/da * da/dprev_h
+  dprev_h = da.dot(Wh.T)
+
+  # dLoss/dWx = dLoss/da * da/dWx
+  dWx = x.T.dot(da)
+  
+  # dLoss/dWh = dLoss/da * da/dWh
+  dWh = prev_h.T.dot(da)
+
+  # dLoss/db = dLoss/da * da/db
+  db = da.sum(axis=0) 
   ##############################################################################
   #                               END OF YOUR CODE                             #
   ##############################################################################
