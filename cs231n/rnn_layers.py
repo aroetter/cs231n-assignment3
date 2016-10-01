@@ -452,11 +452,23 @@ def lstm_forward(x, h0, Wx, Wh, b):
   - h: Hidden states for all timesteps of all sequences, of shape (N, T, H)
   - cache: Values needed for the backward pass.
   """
-  h, cache = None, None
   #############################################################################
   # TODO: Implement the forward pass for an LSTM over an entire timeseries.   #
   # You should use the lstm_step_forward function that you just defined.      #
   #############################################################################
+  N, T, D = x.shape
+  H = h0.shape[1]
+  h = np.empty((N, T, H))
+  cache = []
+  
+  next_c = np.zeros((N, H))
+  next_h = h0
+  for t in xrange(T):
+    curx = x[:,t,:] # has shape NxD
+    (next_h, next_c, cur_cache) = lstm_step_forward(
+      curx, next_h, next_c, Wx, Wh, b)
+    h[:, t, :] = next_h
+    cache.append(cur_cache)
   pass
   ##############################################################################
   #                               END OF YOUR CODE                             #
