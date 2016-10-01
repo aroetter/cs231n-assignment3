@@ -497,7 +497,27 @@ def lstm_backward(dh, cache):
   # TODO: Implement the backward pass for an LSTM over an entire timeseries.  #
   # You should use the lstm_step_backward function that you just defined.     #
   #############################################################################
-  pass
+  N, T, H = dh.shape
+  D = cache[0][9].shape[1] #get an 'x' array from the cache. 2nd dim is D
+
+  dx = np.empty((N, T, D))
+  dprev_h = np.zeros((N, H))
+  dprev_c = np.zeros((N, H))
+  dWx = np.zeros((D, 4*H))
+  dWh = np.zeros((H, 4*H))
+  db = np.zeros(4*H)
+
+  for t in reversed(xrange(T)):
+    cur_cache = cache[t]
+    total_dh = dh[:, t, :] + dprev_h
+    (cur_dx, dprev_h, dprev_c, cur_dWx, cur_dWh, cur_db) = lstm_step_backward(
+      total_dh, dprev_c, cur_cache)
+    dx[:, t, :] = cur_dx
+    dWx += cur_dWx
+    dWh += cur_dWh
+    db += cur_db
+  # final hidden layer
+  dh0 = dprev_h
   ##############################################################################
   #                               END OF YOUR CODE                             #
   ##############################################################################
