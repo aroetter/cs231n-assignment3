@@ -1,0 +1,2 @@
+run 'jupyter notebook'
+from this directory to start up the python web interface
